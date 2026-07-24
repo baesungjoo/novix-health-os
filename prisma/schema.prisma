@@ -1,0 +1,20 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./novix.db"
+}
+
+model Member {
+  id        Int      @id @default(autoincrement())
+  name      String
+  phone     String
+  birthday  String
+  visits    Int      @default(0)
+  interest  String   @default("")
+  memo      String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

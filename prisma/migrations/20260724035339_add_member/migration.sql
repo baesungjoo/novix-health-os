@@ -1,0 +1,12 @@
+-- CreateTable
+CREATE TABLE "Member" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "name" TEXT NOT NULL,
+    "phone" TEXT NOT NULL,
+    "birthday" TEXT NOT NULL,
+    "visits" INTEGER NOT NULL DEFAULT 0,
+    "interest" TEXT NOT NULL DEFAULT '',
+    "memo" TEXT NOT NULL DEFAULT '',
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" DATETIME NOT NULL
+);
