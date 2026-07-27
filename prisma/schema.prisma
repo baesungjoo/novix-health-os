@@ -7,6 +7,43 @@ datasource db {
   url      = "file:./novix.db"
 }
 
+enum ReservationStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum TimelineType {
+  MEMBER_CREATED
+  RESERVATION_CREATED
+  RESERVATION_COMPLETED
+  NEXT_ACTION_CREATED
+  NEXT_ACTION_COMPLETED
+}
+
+enum NextActionType {
+  CALL
+  VISIT
+  COUNSELING
+  FOLLOW_UP
+  PAYMENT
+  OTHER
+}
+
+enum NextActionPriority {
+  URGENT
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum NextActionStatus {
+  TODO
+  COMPLETED
+}
+
 model Member {
   id        Int      @id @default(autoincrement())
   name      String
@@ -17,4 +54,54 @@ model Member {
   memo      String   @default("")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  reservations Reservation[]
+  nextActions NextAction[]
+  timelineEvents TimelineEvent[]
+}
+
+model NextAction {
+  id          Int                @id @default(autoincrement())
+  memberId    Int
+  member      Member             @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  type        NextActionType     @default(FOLLOW_UP)
+  title       String
+  description String             @default("")
+  dueDate     String
+  priority    NextActionPriority @default(MEDIUM)
+  status      NextActionStatus   @default(TODO)
+  completedAt DateTime?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  @@index([memberId, dueDate])
+  @@index([status, dueDate, priority])
+}
+
+model Reservation {
+  id        Int               @id @default(autoincrement())
+  memberId  Int
+  member    Member            @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  date      String
+  time      String
+  status    ReservationStatus @default(PENDING)
+  memo      String            @default("")
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  timelineEvents TimelineEvent[]
+}
+
+model TimelineEvent {
+  id            Int          @id @default(autoincrement())
+  memberId      Int
+  member        Member       @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  reservationId Int?
+  reservation   Reservation? @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  type          TimelineType
+  title         String
+  description   String       @default("")
+  metadata      String       @default("")
+  createdAt     DateTime     @default(now())
+
+  @@index([memberId, createdAt])
+  @@index([reservationId])
 }
