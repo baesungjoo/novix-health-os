@@ -10,3 +10,8 @@ tsconfig.tsbuildinfo
 .claude/
 .windsurf/
 skills-lock.json
+
+prisma/novix.db
+prisma/novix.db-journal
+prisma/novix.db-shm
+prisma/novix.db-wal
