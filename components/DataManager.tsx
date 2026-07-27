@@ -1,13 +1,39 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Search, Plus, X, Pencil, Trash2 } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import {
   reservations as seedReservations,
   Member,
   Reservation,
   ReservationStatus,
 } from '@/lib/demo-data';
+import { MemberDetailPanel } from './MemberDetailPanel';
+import { MemberForm } from './member/MemberForm';
+import { MemberTable } from './member/MemberTable';
+import { MemberToolbar } from './member/MemberToolbar';
+import {
+  Button,
+  Badge,
+  Modal,
+  Card,
+  ButtonStyles,
+  BadgeStyles,
+  ModalStyles,
+  TableStyles,
+  CardStyles,
+  InputStyles,
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableCell,
+  TableHeaderCell,
+  Input,
+  TextArea,
+} from './ui';
+
+type DetailTab = 'info' | 'reservations' | 'next-action' | 'counseling' | 'purchases' | 'notes';
 
 export function MembersManager() {
   const [items, setItems] = useState<Member[]>([]);
@@ -17,6 +43,8 @@ export function MembersManager() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+  const [activeTab, setActiveTab] = useState<DetailTab>('info');
 
   const loadMembers = async () => {
     try {
@@ -134,27 +162,14 @@ export function MembersManager() {
 
   return (
     <>
-      <div className="toolbar">
-        <div className="search">
-          <Search size={18} />
-          <input
-            placeholder="이름, 전화번호, 관심 분야 검색"
-            value={q}
-            onChange={(event) => setQ(event.target.value)}
-          />
-        </div>
-
-        <button
-          className="btn btn-primary"
-          onClick={() => {
-            setEditing(null);
-            setOpen(true);
-          }}
-        >
-          <Plus size={17} />
-          회원 등록
-        </button>
-      </div>
+      <MemberToolbar
+        query={q}
+        onQueryChange={setQ}
+        onCreate={() => {
+          setEditing(null);
+          setOpen(true);
+        }}
+      />
 
       {error && (
         <div className="api-error">
@@ -175,147 +190,48 @@ export function MembersManager() {
         )}
       </p>
 
-      <div className="card table-wrap">
-        <table className="table">
-          <thead>
-            <tr>
-              <th>회원명</th>
-              <th>연락처</th>
-              <th>생년월일</th>
-              <th>방문</th>
-              <th>관심 분야</th>
-              <th>메모</th>
-              <th>관리</th>
-            </tr>
-          </thead>
+      <div className="members-container">
+        <MemberTable
+          members={filtered}
+          loading={loading}
+          selectedMemberId={selectedMember?.id ?? null}
+          onSelect={setSelectedMember}
+          onEdit={(member) => {
+            setEditing(member);
+            setOpen(true);
+          }}
+          onDelete={(member) => void remove(member)}
+        />
 
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={7} className="empty">
-                  회원 정보를 불러오는 중입니다.
-                </td>
-              </tr>
-            ) : filtered.length ? (
-              filtered.map((member) => (
-                <tr key={member.id}>
-                  <td>
-                    <b>{member.name}</b>
-                  </td>
-                  <td>{member.phone}</td>
-                  <td>{member.birthday}</td>
-                  <td>{member.visits}회</td>
-                  <td>
-                    <span className="badge">{member.interest || '미입력'}</span>
-                  </td>
-                  <td>{member.memo || '-'}</td>
-                  <td>
-                    <div className="actions">
-                      <button
-                        className="icon-btn"
-                        onClick={() => {
-                          setEditing(member);
-                          setOpen(true);
-                        }}
-                        title="수정"
-                      >
-                        <Pencil size={16} />
-                      </button>
-
-                      <button
-                        className="icon-btn danger"
-                        onClick={() => void remove(member)}
-                        title="삭제"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={7} className="empty">
-                  검색 결과가 없습니다.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+        {selectedMember && (
+          <MemberDetailPanel
+            member={selectedMember}
+            activeTab={activeTab}
+            onTabChange={(tabId) => setActiveTab(tabId as DetailTab)}
+            onClose={() => {
+              setSelectedMember(null);
+              setActiveTab('info');
+            }}
+          />
+        )}
       </div>
 
-      {open && (
-        <Modal
-          title={editing ? '회원 정보 수정' : '신규 회원 등록'}
-          close={() => {
-            if (saving) return;
-            setOpen(false);
-            setEditing(null);
-          }}
-        >
-          <form onSubmit={save} className="form">
-            <label>
-              이름
-              <input
-                className="field"
-                name="name"
-                defaultValue={editing?.name}
-                required
-              />
-            </label>
+      <MemberForm
+        isOpen={open}
+        editing={editing}
+        saving={saving}
+        onClose={() => {
+          if (saving) return;
+          setOpen(false);
+          setEditing(null);
+        }}
+        onSubmit={save}
+      />
 
-            <label>
-              연락처
-              <input
-                className="field"
-                name="phone"
-                defaultValue={editing?.phone}
-                placeholder="010-0000-0000"
-                required
-              />
-            </label>
-
-            <label>
-              생년월일
-              <input
-                className="field"
-                name="birthday"
-                type="date"
-                defaultValue={editing?.birthday}
-                required
-              />
-            </label>
-
-            <label>
-              관심 분야
-              <input
-                className="field"
-                name="interest"
-                defaultValue={editing?.interest}
-                placeholder="예: 허리·관절"
-              />
-            </label>
-
-            <label>
-              메모
-              <textarea
-                className="field"
-                name="memo"
-                defaultValue={editing?.memo}
-              />
-            </label>
-
-            <button className="btn btn-primary" disabled={saving}>
-              {saving
-                ? '저장 중...'
-                : editing
-                  ? '수정 내용 저장'
-                  : '회원 등록'}
-            </button>
-          </form>
-        </Modal>
-      )}
-
+      <ButtonStyles />
+      <BadgeStyles />
+      <ModalStyles />
+      <TableStyles />
       <CommonStyle />
     </>
   );
@@ -349,44 +265,43 @@ export function ReservationsManager() {
   return (
     <>
       <div className="toolbar">
-        <span className="badge">
+        <Badge>
           오늘 예약 {items.filter((item) => item.date === '2026-07-23').length}건
-        </span>
+        </Badge>
 
-        <button className="btn btn-primary" onClick={() => setOpen(true)}>
-          <Plus size={17} />
+        <Button variant="primary" icon={<Plus size={17} />} onClick={() => setOpen(true)}>
           예약 등록
-        </button>
+        </Button>
       </div>
 
-      <div className="card table-wrap">
-        <table className="table">
-          <thead>
+      <Card className="table-wrap" style={{ padding: 0 }}>
+        <Table>
+          <TableHeader>
             <tr>
-              <th>날짜</th>
-              <th>시간</th>
-              <th>이름</th>
-              <th>연락처</th>
-              <th>상태</th>
-              <th>내용</th>
-              <th>상태 변경</th>
+              <TableHeaderCell>날짜</TableHeaderCell>
+              <TableHeaderCell>시간</TableHeaderCell>
+              <TableHeaderCell>이름</TableHeaderCell>
+              <TableHeaderCell>연락처</TableHeaderCell>
+              <TableHeaderCell>상태</TableHeaderCell>
+              <TableHeaderCell>내용</TableHeaderCell>
+              <TableHeaderCell>상태 변경</TableHeaderCell>
             </tr>
-          </thead>
+          </TableHeader>
 
-          <tbody>
+          <TableBody>
             {items.map((item) => (
-              <tr key={item.id}>
-                <td>{item.date}</td>
-                <td>
+              <TableRow key={item.id}>
+                <TableCell>{item.date}</TableCell>
+                <TableCell>
                   <b>{item.time}</b>
-                </td>
-                <td>{item.name}</td>
-                <td>{item.phone}</td>
-                <td>
-                  <span className="badge">{item.status}</span>
-                </td>
-                <td>{item.memo}</td>
-                <td>
+                </TableCell>
+                <TableCell>{item.name}</TableCell>
+                <TableCell>{item.phone}</TableCell>
+                <TableCell>
+                  <Badge>{item.status}</Badge>
+                </TableCell>
+                <TableCell>{item.memo}</TableCell>
+                <TableCell>
                   <select
                     className="field"
                     value={item.status}
@@ -407,56 +322,30 @@ export function ReservationsManager() {
                       <option key={status}>{status}</option>
                     ))}
                   </select>
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </TableBody>
+        </Table>
+      </Card>
 
-      {open && (
-        <Modal title="예약 등록" close={() => setOpen(false)}>
-          <form onSubmit={add} className="form">
-            <input className="field" name="date" type="date" required />
-            <input className="field" name="time" type="time" required />
-            <input className="field" name="name" placeholder="이름" required />
-            <input className="field" name="phone" placeholder="연락처" required />
-            <textarea className="field" name="memo" placeholder="상담 내용" />
-            <button className="btn btn-primary">예약 등록</button>
-          </form>
-        </Modal>
-      )}
+      <Modal
+        isOpen={open}
+        title="예약 등록"
+        onClose={() => setOpen(false)}
+      >
+        <form onSubmit={add} className="form">
+          <Input name="date" type="date" required />
+          <Input name="time" type="time" required />
+          <Input name="name" placeholder="이름" required />
+          <Input name="phone" placeholder="연락처" required />
+          <TextArea name="memo" placeholder="상담 내용" />
+          <Button variant="primary" type="submit">예약 등록</Button>
+        </form>
+      </Modal>
 
       <CommonStyle />
     </>
-  );
-}
-
-function Modal({
-  title,
-  close,
-  children,
-}: {
-  title: string;
-  close: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="overlay" onMouseDown={close}>
-      <div
-        className="card modal"
-        onMouseDown={(event) => event.stopPropagation()}
-      >
-        <header>
-          <h2>{title}</h2>
-          <button onClick={close} type="button">
-            <X />
-          </button>
-        </header>
-
-        {children}
-      </div>
-    </div>
   );
 }
 
@@ -523,24 +412,33 @@ function CommonStyle() {
         white-space: nowrap;
       }
 
+      .members-container {
+        display: grid;
+        grid-template-columns: 1fr 380px;
+        gap: 16px;
+        align-items: start;
+      }
+
+      .table-wrap {
+        overflow-x: auto;
+      }
+
+      .member-row {
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+      }
+
+      .member-row:hover {
+        background-color: #f9f9f9;
+      }
+
+      .member-row.selected {
+        background-color: #f0f8f5;
+      }
+
       .actions {
         display: flex;
         gap: 6px;
-      }
-
-      .icon-btn {
-        width: 34px;
-        height: 34px;
-        display: grid;
-        place-items: center;
-        border: 1px solid var(--line);
-        border-radius: 9px;
-        background: #fff;
-        cursor: pointer;
-      }
-
-      .icon-btn.danger {
-        color: #b63737;
       }
 
       .empty {
@@ -549,60 +447,15 @@ function CommonStyle() {
         color: var(--muted);
       }
 
-      .overlay {
-        position: fixed;
-        inset: 0;
-        background: rgba(10, 30, 22, 0.45);
-        z-index: 50;
-        display: grid;
-        place-items: center;
-        padding: 18px;
-      }
-
-      .modal {
-        width: min(520px, 100%);
-        padding: 24px;
-        max-height: 90vh;
-        overflow-y: auto;
-      }
-
-      .modal header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 18px;
-      }
-
-      .modal header h2 {
-        margin: 0;
-      }
-
-      .modal header button {
-        background: none;
-        border: 0;
-        cursor: pointer;
-      }
-
       .form {
         display: grid;
         gap: 12px;
       }
 
-      .form label {
-        display: grid;
-        gap: 7px;
-        font-weight: 700;
-        font-size: 14px;
-      }
-
-      .form textarea {
-        min-height: 100px;
-        resize: vertical;
-      }
-
-      .form button:disabled {
-        cursor: wait;
-        opacity: 0.7;
+      @media (max-width: 1024px) {
+        .members-container {
+          grid-template-columns: 1fr;
+        }
       }
 
       @media (max-width: 700px) {
